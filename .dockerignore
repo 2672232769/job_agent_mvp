@@ -1,0 +1,10 @@
+.git
+.netlify
+.venv
+__pycache__
+*.pyc
+.env
+data
+*.db
+*.sqlite
+*.sqlite3

@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>课程岗位匹配智能体</title>
+    <link rel="stylesheet" href="/assets/styles.css?v=20260628-kg-viz" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">CM</div>
+          <div>
+            <div class="brand-title">课程岗位匹配智能体</div>
+            <div class="brand-subtitle">Course Match Agent</div>
+          </div>
+        </div>
+        <nav class="nav-list" aria-label="主导航">
+          <button class="nav-item active" data-target="syllabus-panel">大纲入库</button>
+          <button class="nav-item" data-target="jobs-panel">岗位池</button>
+          <button class="nav-item" data-target="knowledge-panel">知识图谱</button>
+          <button class="nav-item" data-target="match-panel">智能匹配</button>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="status-dot"></div>
+          <span id="healthText">连接中</span>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <h1>课程能力与岗位要求匹配工作台</h1>
+            <p>上传教学大纲，抽取课程能力，并在已抓取岗位池中生成可解释匹配结果。</p>
+          </div>
+          <div class="stats-strip" aria-label="数据库统计">
+            <div class="stat">
+              <span id="statSyllabi">0</span>
+              <label>课程大纲</label>
+            </div>
+            <div class="stat">
+              <span id="statJobs">0</span>
+              <label>岗位</label>
+            </div>
+            <div class="stat">
+              <span id="statMatches">0</span>
+              <label>匹配记录</label>
+            </div>
+          </div>
+        </header>
+
+        <section class="grid-workspace">
+          <section id="syllabus-panel" class="panel syllabus-panel active-panel">
+            <div class="panel-header">
+              <div>
+                <h2>大纲入库</h2>
+                <p>支持 PDF、DOCX、TXT、MD；扫描版 PDF 会调用 OCR 解析。</p>
+              </div>
+              <button id="refreshSyllabiBtn" class="icon-button" title="刷新大纲">刷新</button>
+            </div>
+
+            <form id="uploadForm" class="upload-box">
+              <label class="file-picker">
+                <input id="fileInput" name="file" type="file" accept=".pdf,.docx,.txt,.md" required />
+                <span class="file-button">选择大纲文件</span>
+                <span id="fileNameText" class="file-name">尚未选择文件</span>
+              </label>
+              <input id="titleInput" name="title" type="text" placeholder="可选：课程名称" />
+              <label class="check-row">
+                <input id="analyzeInput" name="analyze" type="checkbox" checked />
+                <span>上传后自动分析课程能力</span>
+              </label>
+              <button type="submit" class="primary-button">上传并入库</button>
+            </form>
+
+            <div class="section-title">已入库课程</div>
+            <div id="syllabusList" class="course-list"></div>
+          </section>
+
+          <section id="jobs-panel" class="panel jobs-panel">
+            <div class="panel-header">
+              <div>
+                <h2>岗位池</h2>
+                <p>抓取岗位并查看已入库的岗位详情，包含职责和任职要求。</p>
+              </div>
+              <button id="refreshJobsBtn" class="icon-button" title="刷新岗位">刷新</button>
+            </div>
+
+            <section class="crawl-workspace" aria-label="岗位抓取">
+              <form id="manualCrawlForm" class="crawl-card">
+                <div class="crawl-card-header">
+                  <div>
+                    <h3>按关键词抓取</h3>
+                    <p>输入岗位搜索词，系统会按原文去招聘平台搜索并入库，不做智能改写。</p>
+                  </div>
+                </div>
+                <input id="manualCrawlInput" class="search-input" type="text" placeholder="例如：ai应用开发、软件测试工程师、Python后端" required />
+                <div class="crawl-control-grid">
+                  <div>
+                    <label for="manualCrawlSource">平台</label>
+                    <select id="manualCrawlSource">
+                      <option value="51job">51job</option>
+                      <option value="sample">示例数据</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="manualCrawlPages">页数</label>
+                    <input id="manualCrawlPages" type="number" min="1" max="10" value="1" />
+                  </div>
+                  <label class="check-row inline-check">
+                    <input id="manualCrawlHeadless" type="checkbox" checked />
+                    <span>后台抓取</span>
+                  </label>
+                </div>
+                <button id="manualCrawlBtn" class="primary-button" type="submit">开始抓取</button>
+              </form>
+
+              <section class="crawl-card">
+                <div class="crawl-card-header">
+                  <div>
+                    <h3>按课程智能抓取</h3>
+                    <p>选择课程后，智能体会分析主要技术和能力，生成对口岗位搜索词再抓取。</p>
+                  </div>
+                </div>
+                <div class="job-course-picker">
+                  <div class="picker-header compact-picker-header">
+                    <div>
+                      <div class="section-title">选择用于抓取的课程</div>
+                      <p>可直接在岗位池页选择课程，不需要回到大纲入库页。</p>
+                    </div>
+                    <button id="clearJobCourseSelectedBtn" class="text-button" type="button">清空</button>
+                  </div>
+                  <input id="jobCourseSearchInput" class="search-input" type="search" placeholder="搜索课程名称、文件名、能力方向" />
+                  <div id="jobCourseList" class="job-course-list"></div>
+                </div>
+                <div class="selected-box compact-selected-box">
+                  <div class="section-title">已选择课程</div>
+                  <div id="jobCrawlSelectedCourses" class="selected-list">暂未选择课程。</div>
+                </div>
+                <div class="crawl-control-grid">
+                  <div>
+                    <label for="courseCrawlCity">城市</label>
+                    <input id="courseCrawlCity" type="text" placeholder="可选：广州" />
+                  </div>
+                  <div>
+                    <label for="courseCrawlPages">页数</label>
+                    <input id="courseCrawlPages" type="number" min="1" max="10" value="1" />
+                  </div>
+                  <div>
+                    <label for="courseCrawlKeywordLimit">搜索词数</label>
+                    <input id="courseCrawlKeywordLimit" type="number" min="1" max="12" value="6" />
+                  </div>
+                  <div>
+                    <label for="courseCrawlSource">平台</label>
+                    <select id="courseCrawlSource">
+                      <option value="51job">51job</option>
+                      <option value="sample">示例数据</option>
+                    </select>
+                  </div>
+                  <label class="check-row inline-check">
+                    <input id="courseCrawlHeadless" type="checkbox" checked />
+                    <span>后台抓取</span>
+                  </label>
+                </div>
+                <div class="crawl-actions">
+                  <button id="buildSearchPlanBtn" class="secondary-button" type="button">生成搜索计划</button>
+                  <button id="courseCrawlBtn" class="primary-button" type="button">生成并抓取</button>
+                </div>
+                <div id="searchPlanBox" class="search-plan-box">
+                  <div class="empty-state">生成搜索计划后会显示建议关键词、课程技术依据和岗位方向。</div>
+                </div>
+              </section>
+            </section>
+
+            <div class="toolbar">
+              <input id="jobSearchInput" class="search-input" type="search" placeholder="搜索岗位、公司、城市、要求" />
+              <button id="jobSearchBtn" class="secondary-button">搜索</button>
+            </div>
+
+            <div class="job-table-wrap">
+              <table class="job-table">
+                <thead>
+                  <tr>
+                    <th>岗位</th>
+                    <th>公司</th>
+                    <th>城市</th>
+                    <th>薪资</th>
+                  </tr>
+                </thead>
+                <tbody id="jobTableBody"></tbody>
+              </table>
+            </div>
+
+            <article id="jobDetail" class="detail-drawer">
+              <div class="empty-state">选择一个岗位查看完整描述。</div>
+            </article>
+          </section>
+
+          <section id="knowledge-panel" class="panel knowledge-panel">
+            <div class="panel-header">
+              <div>
+                <h2>知识图谱</h2>
+                <p>把课程能力、岗位要求和向量长期写入 Neo4j。匹配只使用已经构建好的图谱，不在匹配时临时抽取。</p>
+              </div>
+              <button id="refreshKgBtn" class="icon-button" title="刷新图谱状态">刷新</button>
+            </div>
+
+            <section class="kg-status-grid" aria-label="知识图谱状态">
+              <article class="kg-status-card">
+                <h3>SQLite 抽取缓存</h3>
+                <div id="kgSqliteStats" class="kg-metric-list"></div>
+              </article>
+              <article class="kg-status-card">
+                <h3>Neo4j 图数据库</h3>
+                <div id="kgNeo4jStats" class="kg-metric-list"></div>
+              </article>
+            </section>
+
+            <section class="kg-actions-grid">
+              <article class="crawl-card">
+                <h3>构建课程图谱</h3>
+                <p>对已选课程抽取课程能力、知识点、工具方法和岗位方向，生成向量，并同步到 Neo4j。</p>
+                <label class="check-row">
+                  <input id="kgCourseForceInput" type="checkbox" />
+                  <span>强制重建已存在的课程节点</span>
+                </label>
+                <button id="buildCourseKgBtn" class="primary-button" type="button">构建已选课程图谱</button>
+                <button id="buildAllCourseKgBtn" class="secondary-button" type="button">构建全部课程图谱</button>
+              </article>
+
+              <article class="crawl-card">
+                <h3>构建岗位图谱</h3>
+                <p>默认从未完成岗位队列继续处理。勾选强制重建时，才会重新处理最近的完整 JD 岗位。</p>
+                <div class="crawl-control-grid two-cols">
+                  <div>
+                    <label for="kgJobLimitInput">本次处理岗位数</label>
+                    <input id="kgJobLimitInput" type="number" min="1" max="500" value="30" />
+                  </div>
+                  <label class="check-row inline-check">
+                    <input id="kgJobForceInput" type="checkbox" />
+                    <span>强制重建最近岗位</span>
+                  </label>
+                </div>
+                <button id="buildJobKgBtn" class="primary-button" type="button">启动岗位图谱任务</button>
+              </article>
+
+              <article class="crawl-card">
+                <h3>图谱预览</h3>
+                <p>从 Neo4j 读取已经入图的课程、岗位、岗位要求和关系，检查当前图谱覆盖情况。</p>
+                <button id="previewKgBtn" class="secondary-button" type="button">加载图谱预览</button>
+              </article>
+            </section>
+
+            <section id="kgTaskStatus" class="kg-task-status" aria-live="polite">
+              <strong>任务状态</strong>
+              <span>等待操作。岗位图谱任务会在后台逐个处理岗位，页面会显示进度、成功数、失败数和当前岗位。</span>
+            </section>
+
+            <section class="kg-preview">
+              <div class="section-title">图谱预览</div>
+              <div id="kgPreviewBox" class="kg-preview-box">
+                <div class="empty-state">构建课程图谱或岗位图谱后，可以加载节点和关系预览。完整交互式图谱后续会在这里扩展。</div>
+              </div>
+            </section>
+          </section>
+
+          <section id="match-panel" class="panel match-panel">
+            <div class="panel-header">
+              <div>
+                <h2>智能匹配</h2>
+                <p>选择一门或多门课程，让模型从岗位池中找出可解释匹配。</p>
+              </div>
+            </div>
+            <div class="match-workspace">
+              <aside class="match-course-picker">
+                <div class="picker-header">
+                  <div>
+                    <div class="section-title">选择参与匹配的课程</div>
+                    <p>可多选，系统会合并课程画像与岗位要求进行判断。</p>
+                  </div>
+                  <button id="clearSelectedBtn" class="text-button" type="button">清空</button>
+                </div>
+                <input id="courseSearchInput" class="search-input" type="search" placeholder="搜索课程名称、文件名、能力方向" />
+                <div id="matchCourseList" class="match-course-list"></div>
+              </aside>
+
+              <section class="match-main">
+                <div class="match-controls">
+                  <div>
+                    <label for="matchLimitInput">输出岗位数</label>
+                    <input id="matchLimitInput" type="number" min="1" max="20" value="5" />
+                  </div>
+                  <div>
+                    <label for="candidateLimitInput">候选岗位数</label>
+                    <input id="candidateLimitInput" type="number" min="1" max="300" value="60" />
+                  </div>
+                  <button id="previewEvidenceBtn" class="secondary-button">预览图谱证据</button>
+                  <button id="runMatchBtn" class="primary-button">开始匹配</button>
+                </div>
+
+                <div class="selected-box">
+                  <div class="section-title">已选择课程</div>
+                  <div id="selectedCourses" class="selected-list">暂未选择课程。</div>
+                </div>
+
+                <div class="result-header">
+                  <div class="section-title">匹配结果</div>
+                  <button id="refreshRunsBtn" class="text-button">查看历史</button>
+                </div>
+                <div id="matchResults" class="match-results">
+                  <div class="empty-state">匹配结果会显示岗位、公司、课程能力依据、岗位要求和解释。</div>
+                </div>
+              </section>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div id="matchDetailModal" class="modal-backdrop" hidden>
+      <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="matchDetailTitle">
+        <div class="modal-header">
+          <div>
+            <h2 id="matchDetailTitle">岗位匹配详情</h2>
+            <p id="matchDetailSubtitle"></p>
+          </div>
+          <button id="closeMatchDetailBtn" class="icon-button" type="button">关闭</button>
+        </div>
+        <div id="matchDetailBody" class="modal-body"></div>
+      </section>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="/assets/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+    <script src="/assets/app.js?v=20260628-kg-viz"></script>
+  </body>
+</html>
